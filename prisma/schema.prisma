@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Label {
+  id             Int         @id @default(autoincrement())
+  postcode       String?
+  pdfPath        String
+  trackingNumber String?
+  status         LabelStatus @default(NEW)
+  assignedOrderId String?
+  createdAt      DateTime @default(now())
+  assignedAt     DateTime?
+}
+
+enum LabelStatus {
+  NEW
+  ASSIGNED
+  USED
+  CANCELLED
+}
+
+model UserConfig {
+  id                 Int      @id @default(autoincrement())
+  linnworksAccountId String   @unique
+  apiKey             String
+  config             Json?
+  createdAt          DateTime @default(now())
+}
