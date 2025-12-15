@@ -16,6 +16,6 @@ export const shippingController = {
   },
 
   async cancelLabel(req: Request, res: Response) {
-    return res.json(await linnworksService.cancelLabel());
+    return res.json(await linnworksService.cancelLabel(req.body));
   },
 };

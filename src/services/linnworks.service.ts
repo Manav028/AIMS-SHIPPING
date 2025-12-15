@@ -1,4 +1,4 @@
-import { labelPoolService } from "./labelPool.service";
+import prisma from "../db/prismaClient";
 import fs from "fs";
 
 export const linnworksService = {
@@ -17,19 +17,45 @@ export const linnworksService = {
 
   async generateLabel(request: any) {
     const orderId = request?.OrderId;
-    const postcode = request?.Recipient?.PostCode;
-    if (!postcode) throw new Error("Missing postcode");
+    if (!orderId) throw new Error("Missing OrderId");
 
-    const label = await labelPoolService.findLabelByPostcode(postcode);
-    if (!label) throw new Error("No matching label for postcode");
+    const label = await prisma.label.findUnique({
+      where: { reference: orderId }
+    });
 
-    await labelPoolService.assignLabel(label.id, orderId);
+    if (!label) {
+      throw new Error("No prepaid label found for this OrderId");
+    }
+
+    if (label.status !== "NEW") {
+      throw new Error("Label already used");
+    }
+
+    await prisma.label.update({
+      where: { id: label.id },
+      data: {
+        status: "ASSIGNED",
+        assignedAt: new Date()
+      }
+    });
+
     const pdfBytes = fs.readFileSync(label.pdfPath);
 
-    return { TrackingNumber: label.trackingNumber || "PREPAID", LabelBase64: pdfBytes.toString("base64"), Format: "PDF" };
+    return {
+      TrackingNumber: label.trackingNumber || "PREPAID",
+      LabelBase64: pdfBytes.toString("base64"),
+      Format: "PDF"
+    };
   },
 
-  async cancelLabel() {
+  async cancelLabel(request: any) {
+    const orderId = request?.OrderId;
+
+    await prisma.label.update({
+      where: { reference: orderId },
+      data: { status: "NEW", assignedAt: null }
+    });
+
     return { Success: true };
-  },
+  }
 };
