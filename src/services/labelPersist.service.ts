@@ -1,4 +1,4 @@
-import prisma from "../db/prismaClient";
+import pool from "../db/postgres";
 
 export async function persistLabel(input: {
   pdfPath: string;
@@ -11,18 +11,18 @@ export async function persistLabel(input: {
     throw new Error("Missing REF (Linnworks OrderId)");
   }
 
-  console.log("Persisting label for REF:", input.metadata.reference);
-  console.log("With tracking number:", input.metadata.fedexTracking);
-  console.log("PDF Path:", input.pdfPath);
-  console.log("Current timestamp:", new Date().toISOString());
+  const query = `
+    INSERT INTO labels (pdf_path, reference, fedex_tracking)
+    VALUES ($1, $2, $3)
+    ON CONFLICT (reference) DO UPDATE
+    SET
+      pdf_path = EXCLUDED.pdf_path,
+      fedex_tracking = EXCLUDED.fedex_tracking
+  `;
 
-  await prisma.label.create({
-    data: {
-      reference: input.metadata.reference,
-      trackingNumber: input.metadata.fedexTracking,
-      pdfPath: input.pdfPath,
-      status: "NEW",
-      createdAt: new Date()
-    }
-  });
+  await pool.query(query, [
+    input.pdfPath,
+    input.metadata.reference,
+    input.metadata.fedexTracking ?? null,
+  ]);
 }

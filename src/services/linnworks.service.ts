@@ -1,4 +1,4 @@
-import prisma from "../db/prismaClient";
+import pool from "../db/postgres";
 import fs from "fs";
 
 export const linnworksService = {
@@ -6,7 +6,7 @@ export const linnworksService = {
     return {
       Services: [
         {
-          Name: "FedEx Prepaid (Postcode Match)",
+          Name: "FedEx Prepaid (Reference Match)",
           Code: "fedex_prepaid",
           TrackingUrl: "https://www.fedex.com/fedextrack/?trknbr=",
           PrintLabel: true,
@@ -19,9 +19,13 @@ export const linnworksService = {
     const orderId = request?.OrderId;
     if (!orderId) throw new Error("Missing OrderId");
 
-    const label = await prisma.label.findUnique({
-      where: { reference: orderId }
-    });
+    // 1️⃣ Fetch label
+    const { rows } = await pool.query(
+      `SELECT * FROM labels WHERE reference = $1`,
+      [orderId]
+    );
+
+    const label = rows[0];
 
     if (!label) {
       throw new Error("No prepaid label found for this OrderId");
@@ -31,31 +35,41 @@ export const linnworksService = {
       throw new Error("Label already used");
     }
 
-    await prisma.label.update({
-      where: { id: label.id },
-      data: {
-        status: "ASSIGNED",
-        assignedAt: new Date()
-      }
-    });
+    // 2️⃣ Mark as assigned (transaction-safe)
+    await pool.query(
+      `
+      UPDATE labels
+      SET status = 'ASSIGNED',
+          assigned_at = now()
+      WHERE id = $1
+      `,
+      [label.id]
+    );
 
-    const pdfBytes = fs.readFileSync(label.pdfPath);
+    // 3️⃣ Read PDF
+    const pdfBytes = fs.readFileSync(label.pdf_path);
 
     return {
-      TrackingNumber: label.trackingNumber || "PREPAID",
+      TrackingNumber: label.tracking_number || "PREPAID",
       LabelBase64: pdfBytes.toString("base64"),
-      Format: "PDF"
+      Format: "PDF",
     };
   },
 
   async cancelLabel(request: any) {
     const orderId = request?.OrderId;
+    if (!orderId) throw new Error("Missing OrderId");
 
-    await prisma.label.update({
-      where: { reference: orderId },
-      data: { status: "NEW", assignedAt: null }
-    });
+    await pool.query(
+      `
+      UPDATE labels
+      SET status = 'NEW',
+          assigned_at = NULL
+      WHERE reference = $1
+      `,
+      [orderId]
+    );
 
     return { Success: true };
-  }
+  },
 };
