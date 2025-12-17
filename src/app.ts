@@ -4,7 +4,7 @@ dotenv.config();
 
 import express from "express";
 import cors from "cors";
-import shippingRoutes from "./routes/shipping.routes";
+import shippingRoutes from "./routes/linnworks.routes";
 import uploadRoutes from "./routes/upload.routes"
 
 const app = express();

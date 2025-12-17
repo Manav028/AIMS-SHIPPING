@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import { uploadPdf } from "../controllers/upload.controller";
+import { authMiddleware } from "../middleware/auth";
 
 const upload = multer({
   limits: { fileSize: 20 * 1024 * 1024 },
@@ -13,6 +14,6 @@ const upload = multer({
 });
 
 const router = express.Router();
-router.post("/upload", upload.single("file"),uploadPdf);
+router.post("/upload", authMiddleware, upload.single("file"), uploadPdf);
 
 export default router;

@@ -1,10 +1,11 @@
 import { PDFDocument } from "pdf-lib";
-import fs from "fs";
 import path from "path";
+import { writePdf } from "../utils/fileSystem";
+import { SplitPdfPage } from "../types/ingestion.types";
 
-export async function splitPdf(buffer: Buffer) {
+export async function splitPdf(buffer: Buffer): Promise<SplitPdfPage[]> {
   const doc = await PDFDocument.load(buffer);
-  const pages = [];
+  const pages: SplitPdfPage[] = [];
 
   for (let i = 0; i < doc.getPageCount(); i++) {
     const newDoc = await PDFDocument.create();
@@ -12,13 +13,17 @@ export async function splitPdf(buffer: Buffer) {
     newDoc.addPage(page);
 
     const bytes = await newDoc.save();
-    const filePath = path.join("labels", `label_${Date.now()}_${i}.pdf`);
+    const filePath = path.join(
+      "labels",
+      `label_${Date.now()}_${i + 1}.pdf`
+    );
 
-    fs.writeFileSync(filePath, bytes);
+    writePdf(filePath, bytes);
 
     pages.push({
       path: filePath,
-      buffer: bytes
+      buffer: Buffer.from(bytes),
+      pageNumber: i + 1,
     });
   }
 
