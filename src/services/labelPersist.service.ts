@@ -12,12 +12,12 @@ export async function persistLabel(input: {
   }
 
   const query = `
-    INSERT INTO labels (pdf_path, reference, fedex_tracking)
+    INSERT INTO labels (pdf_path, reference, tracking_number)
     VALUES ($1, $2, $3)
     ON CONFLICT (reference) DO UPDATE
     SET
       pdf_path = EXCLUDED.pdf_path,
-      fedex_tracking = EXCLUDED.fedex_tracking
+      tracking_number = EXCLUDED.tracking_number
   `;
 
   await pool.query(query, [

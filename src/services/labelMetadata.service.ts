@@ -7,8 +7,6 @@ export function parseMetadata(text: string): LabelMetadata {
   const fedexMatch = text.match(/\b\d{4}\s?\d{4}\s?\d{4}\b/);
   const refMatch = [...text.matchAll(/REF[\s:\uFF1A-]*([0-9A-Za-z]+)/gi)];
 
-  console.log("Extracted REF matches:",refMatch[0][1].trim());
-
   return {
     fedexTracking: fedexMatch ? fedexMatch[0] : null,
     reference: refMatch.length ? refMatch[0][1] : null

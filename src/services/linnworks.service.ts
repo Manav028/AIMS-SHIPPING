@@ -19,7 +19,6 @@ export const linnworksService = {
     const orderId = request?.OrderId;
     if (!orderId) throw new Error("Missing OrderId");
 
-    // 1️⃣ Fetch label
     const { rows } = await pool.query(
       `SELECT * FROM labels WHERE reference = $1`,
       [orderId]
@@ -31,9 +30,9 @@ export const linnworksService = {
       throw new Error("No prepaid label found for this OrderId");
     }
 
-    if (label.status !== "NEW") {
-      throw new Error("Label already used");
-    }
+    // if (label.status !== "NEW") {
+    //   throw new Error("Label already used");
+    // }
 
     // 2️⃣ Mark as assigned (transaction-safe)
     await pool.query(
@@ -50,7 +49,9 @@ export const linnworksService = {
     const pdfBytes = fs.readFileSync(label.pdf_path);
 
     return {
-      TrackingNumber: label.tracking_number || "PREPAID",
+      LeadTrackingNumber: label.tracking_number || "PREPAID",
+      Cost: 0,
+      Currency: "GBP",
       LabelBase64: pdfBytes.toString("base64"),
       Format: "PDF",
     };
