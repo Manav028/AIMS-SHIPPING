@@ -7,7 +7,6 @@
     "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/server.js",
-    "worker": "ts-node src/workers/importDailyPdf.ts",
     "prisma:generate": "prisma generate",
     "migrate:dev": "prisma migrate dev"
   },
