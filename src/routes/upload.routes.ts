@@ -4,12 +4,16 @@ import { uploadPdf } from "../controllers/upload.controller";
 import { authMiddleware } from "../middleware/auth";
 
 const upload = multer({
-  limits: { fileSize: 20 * 1024 * 1024 },
-  fileFilter: (_, file, cb) => {
+  fileFilter: (
+    _: Express.Request,
+    file: Express.Multer.File,
+    cb: multer.FileFilterCallback
+  ) => {
     if (file.mimetype !== "application/pdf") {
-      return cb(new Error("Only PDFs allowed"));
+      cb(new Error("Only PDF allowed"));
+    } else {
+      cb(null, true);
     }
-    cb(null, true);
   }
 });
 
