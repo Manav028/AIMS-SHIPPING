@@ -13,41 +13,37 @@ export async function addNewUser(input: {
     throw new Error("Invalid AddNewUser request");
   }
 
-  const client = await pool.connect();
+  const query = `
+    WITH new_account AS (
+      INSERT INTO accounts (linnworks_unique_identifier, email, account_name)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (linnworks_unique_identifier) DO UPDATE
+      SET email = EXCLUDED.email
+      RETURNING id
+    )
+    INSERT INTO auth_tokens (account_id, token)
+    SELECT id, $4 FROM new_account
+    RETURNING token;
+  `;
+
+  const token = crypto.randomBytes(16).toString("hex");
+
   try {
-    await client.query("BEGIN");
+    const result = await pool.query(query, [
+      LinnworksUniqueIdentifier,
+      Email,
+      AccountName,
+      token,
+    ]);
 
-    const accountRes = await client.query(
-      `INSERT INTO accounts (linnworks_unique_identifier, email, account_name)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (linnworks_unique_identifier) DO UPDATE
-       SET email = EXCLUDED.email
-       RETURNING id`,
-      [LinnworksUniqueIdentifier, Email, AccountName]
-    );
-
-    const accountId = accountRes.rows[0].id;
-    console.log("Account ID:", accountId);
-    const token = crypto.randomBytes(16).toString("hex");
-
-    await client.query(
-      `INSERT INTO auth_tokens (account_id, token)
-       VALUES ($1, $2)`,
-      [accountId, token]
-    );
-
-    await client.query("COMMIT");
-
-    log("INFO", "New user registered", { accountId });
+    log("INFO", "New user registered", { accountId: result.rows[0].id });
     return token;
   } catch (err) {
-    await client.query("ROLLBACK");
     log("ERROR", "AddNewUser failed", err);
     throw err;
-  } finally {
-    client.release();
   }
 }
+
 
 export async function getAccountByToken(token: string) {
   const result = await pool.query(
